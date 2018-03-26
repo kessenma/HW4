@@ -12,6 +12,10 @@
 import os
 import requests
 import json
+# How to import an ignored giphy_api_key
+#Make a .gitignore foler
+#what to do once you have 
+# from .gitignore/giphy_api_key import api_key
 from giphy_api_key import api_key
 from flask import Flask, render_template, session, redirect, request, url_for, flash
 from flask_script import Manager, Shell
@@ -299,7 +303,7 @@ def index():
     num_gifs = len(gifs)
     form = GifSearchForm()
     if form.validate_on_submit():
-        if db.session.query(Search).filter_by(term=form.search.data).first():
+        if db.session.query(SearchTerm).filter_by(term=form.search.data).first():
             term = db.session.query(Search).filter_by(term=form.search.data).first()
             all_gifs = []
             for i in term.gifs.all():
@@ -310,9 +314,11 @@ def index():
             # request gifs for that search term
             # add the search term and gifs to database
             # Need to figure out what the difference between this baseURL and the other URL are
-            baseURL = "https://www.buzzfeed.com/api/v2/feeds/"
+            params = {api_key:api_key}
+            baseURL = "api.giphy.com/v1/gifs/search"
             feed_name=form.search.data
-            response = requests.get(baseURL + feed_name)
+            params['q']=feed_name
+            response = requests.get(baseURL , params)
             #print("RESPONSE TEXT", response.text)
             gifInResponse = json.loads(response.text)['buzzes']
             gifFieldsRequired = []
