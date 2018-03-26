@@ -66,7 +66,7 @@ login_manager.init_app(app) # set up login manager
 tags = db.Table('tags',db.Column('search_id',db.Integer, db.ForeignKey('SearchTerm.id')),db.Column('gif_id',db.Integer, db.ForeignKey('gifs.id')))
 
 # Set up association Table between Gifs and collections prepared by user
-user_collection = db.Table('user_collection',db.Column('user_id', db.Integer, db.ForeignKey('articles.id')),db.Column('collection_id',db.Integer, db.ForeignKey('personalCollections.id')))
+user_collection = db.Table('user_collection',db.Column('user_id', db.Integer, db.ForeignKey('gifs.id')),db.Column('collection_id',db.Integer, db.ForeignKey('personalCollections.id')))
 
 
 ## User-related Models
@@ -295,12 +295,37 @@ def secret():
 ## Other routes
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    # TODO 364: Edit this view function, which has a provided return statement, so that the GifSearchForm can be rendered.
-    # If the form is submitted successfully:
-    # invoke get_or_create_search_term on the form input and redirect to the function corresponding to the path /gifs_searched/<search_term> in order to see the results of the gif search. (Just a couple lines of code!)
-
-    # HINT: invoking url_for with a named argument will send additional data. e.g. url_for('artist_info',artist='solange') would send the data 'solange' to a route /artist_info/<artist>
-    return render_template('index.html',form=form)
+    gifs = Gif.query.all()
+    num_gifs = len(gifs)
+    form = GifSearchForm()
+    if form.validate_on_submit():
+        if db.session.query(Search).filter_by(term=form.search.data).first():
+            term = db.session.query(Search).filter_by(term=form.search.data).first()
+            all_gifs = []
+            for i in term.gifs.all():
+                all_gifs.append((i.title, i.gifURL))
+            print(all_gifs)
+            return render_template('all_gifs.html', all_gifs = all_gifs)
+        else:
+            # request gifs for that search term
+            # add the search term and gifs to database
+            # Need to figure out what the difference between this baseURL and the other URL are
+            baseURL = "https://www.buzzfeed.com/api/v2/feeds/"
+            feed_name=form.search.data
+            response = requests.get(baseURL + feed_name)
+            #print("RESPONSE TEXT", response.text)
+            gifInResponse = json.loads(response.text)['buzzes']
+            gifFieldsRequired = []
+            for a in gifInResponse:
+                gifURL = "https://www.giphy.com/"+a['canonical_path']
+                gif_tuple = (a['id'], a['title'], gifURL)
+                if gif_tuple not in gifFieldsRequired:
+                    gifFieldsRequired.append(gif_tuple)
+            print("Gif fields required:", gifFieldsRequired)
+            searchterm = get_or_create_search_term(db.session, form.search.data, gifFieldsRequired)
+            print(searchterm)
+            return "Added to DB"
+    return render_template('index.html', form=form, num_gifs=num_gifs)
 
 # Provided
 @app.route('/gifs_searched/<search_term>')
