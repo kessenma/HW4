@@ -1,6 +1,6 @@
 # SI 364 - W18 - HW4
 
-### DEADLINE: March 29, 2018 at 11:59 pm
+### DEADLINE: March 25, 2018 at 11:59 pm
 
 **You should read all of the below before beginning to ensure you set yourself up well and submit the assignment correctly.**
 
