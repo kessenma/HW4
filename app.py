@@ -60,7 +60,7 @@ login_manager.init_app(app) # set up login manager
 search_gifs = db.Table('search_gifs', db.Column('search_id', db.Integer, db.ForeignKey('SearchTerm.id')),db.Column('gif_id', db.Integer,db.ForeignKey('Gif.id')))
 
 # TODO 364: Set up association Table between GIFs and collections prepared by user (you can call it anything you want. We suggest: user_collection)
-user_collection = db.Table('user_collection',db.Column('gif_id', db.Integer, db.ForeignKey('Gif.id')),db.Column('collection_id',db.Integer, db.ForeignKey('PersonalCollection.id')))
+user_collection = db.Table('user_collection',db.Column('gif_id', db.Integer, db.ForeignKey('Gif.id')),db.Column('collection_id',db.Integer, db.ForeignKey('PersonalGifCollection.id')))
 
 
 ## User-related Models
@@ -72,7 +72,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(255), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
-    user_collections = db.relationship('PersonalCollection', backref='User')
+    user_collections = db.relationship('PersonalGifCollection', backref='User')
 
     @property
     def password(self):
@@ -99,27 +99,27 @@ def load_user(user_id):
 
 # Model to store gifs
 class Gif(db.Model):
-    __tablename__ = "gifs"
+    __tablename__ = 'Gif'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(128))
-    gifURL = db.Column(db.String(256))
+    embedURL = db.Column(db.String(256))
 
     def __repr__(self):
         return "{}, URL: {}".format(self.title,self.gifURL)
 
 # Model to store a personal gif collection
-class PersonalCollection(db.Model):
-    __tablename__ = "personalCollections"
+class PersonalGifCollection(db.Model):
+    __tablename__ = "personalGifCollection"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    gifs = db.relationship('Gif',secondary=user_collection,backref=db.backref('personalCollections',lazy='dynamic'),lazy='dynamic')
+    gifs = db.relationship('Gif',secondary=user_collection,backref=db.backref('personalGifCollection',lazy='dynamic'),lazy='dynamic')
 
-class Search(db.Model):
-    __tablename__ = "search"
+class SearchTerm(db.Model):
+    __tablename__ = "SearchTerm"
     id = db.Column(db.Integer, primary_key=True)
-    term = db.Column(db.String(32),unique=True) # Only unique searches
-    gifs = db.relationship('Gif',secondary=tags,backref=db.backref('search',lazy='dynamic'),lazy='dynamic')
+    term = db.Column(db.String(32),unique=True) 
+    gifs = db.relationship('Gif',secondary=search_gifs,backref=db.backref('SearchTerm',lazy='dynamic'),lazy='dynamic')
 
     def __repr__(self):
         return "{} : {}".format(self.id, self.term)
@@ -348,13 +348,13 @@ def create_collection():
     form.gif_picks.choices = choices
 
     if request.method == 'POST':
-        selected_gif = form.gif_picks.data
-    print("GIFS SELECTED", selected_gifs)
-    gif_objects = [get_gif_by_id(int(id)) for id in selected_gifs]
-    print("GIFS RETURNED", gif_objects)
-    get_or_create_collection(name=form.name.data, current_user=current_user, gif_list=gif_objects)
-    return redirect(url_for('collections'))
-return render_template('create_collection.html', form=form)
+        selected_gifs = form.gif_picks.data
+        print("GIFS SELECTED", selected_gifs)
+        gif_objects = [get_gif_by_id(int(id)) for id in selected_gifs]
+        print("GIFS RETURNED", gif_objects)
+        get_or_create_collection(name=form.name.data, current_user=current_user, gif_list=gif_objects)
+        return redirect(url_for('collections'))
+    return render_template('create_collection.html', form=form)
 
 @app.route('/collections',methods=["GET","POST"])
 @login_required
