@@ -52,14 +52,8 @@ login_manager.init_app(app) # set up login manager
 ########################
 
 ## Association tables
-# NOTE - 364: You may want to complete the models tasks below BEFORE returning to build the association tables! That will making doing this much easier.
-
-# NOTE: Remember that setting up association tables in this course always has the same structure! Just make sure you refer to the correct tables and columns!
-
-# TODO 364: Set up association Table between search terms and GIFs (you can call it anything you want, we suggest 'tags' or 'search_gifs').
 search_gifs = db.Table('search_gifs', db.Column('search_id', db.Integer, db.ForeignKey('SearchTerm.id')),db.Column('gif_id', db.Integer,db.ForeignKey('Gif.id')))
 
-# TODO 364: Set up association Table between GIFs and collections prepared by user (you can call it anything you want. We suggest: user_collection)
 user_collection = db.Table('user_collection',db.Column('gif_id', db.Integer, db.ForeignKey('Gif.id')),db.Column('collection_id',db.Integer, db.ForeignKey('PersonalGifCollection.id')))
 
 
@@ -67,7 +61,7 @@ user_collection = db.Table('user_collection',db.Column('gif_id', db.Integer, db.
 
 # Special model for users to log in
 class User(UserMixin, db.Model):
-    __tablename__ = "users"
+    __tablename__ = "User"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
@@ -109,11 +103,11 @@ class Gif(db.Model):
 
 # Model to store a personal gif collection
 class PersonalGifCollection(db.Model):
-    __tablename__ = "personalGifCollection"
+    __tablename__ = "PersonalGifCollection"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     user_id = db.Column(db.Integer, db.ForeignKey('User.id'))
-    gifs = db.relationship('Gif',secondary=user_collection,backref=db.backref('personalGifCollection',lazy='dynamic'),lazy='dynamic')
+    gifs = db.relationship('Gif',secondary=user_collection,backref=db.backref('PersonalGifCollection',lazy='dynamic'),lazy='dynamic')
 
 class SearchTerm(db.Model):
     __tablename__ = "SearchTerm"
@@ -152,7 +146,6 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log In')
 
-# TODO 364: The following forms for searching for gifs and creating collections are provided and should not be edited. You SHOULD examine them so you understand what data they pass along and can investigate as you build your view functions in TODOs below.
 class GifSearchForm(FlaskForm):
     search = StringField("Enter a term to search GIFs", validators=[Required()])
     submit = SubmitField('Submit')
@@ -288,7 +281,7 @@ def index():
         return redirect(url_for('search_results',search_term=form.search.data))
     # HINT: invoking url_for with a named argument will send additional data. e.g. url_for('artist_info',artist='solange') would send the data 'solange' to a route /artist_info/<artist>
     return render_template('index.html',form=form)
-    
+
 '''
 ### Old Code ### not sure what was going wrong tbh
 def index():
