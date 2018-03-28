@@ -282,6 +282,16 @@ def secret():
 ## Other routes
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    form = GifSearchForm()
+    if form.validate_on_submit():
+        get_or_create_search_term(term=form.search.data)
+        return redirect(url_for('search_results',search_term=form.search.data))
+    # HINT: invoking url_for with a named argument will send additional data. e.g. url_for('artist_info',artist='solange') would send the data 'solange' to a route /artist_info/<artist>
+    return render_template('index.html',form=form)
+    
+'''
+### Old Code ### not sure what was going wrong tbh
+def index():
     gifs = Gif.query.all()
     num_gifs = len(gifs)
     form = GifSearchForm()
@@ -294,15 +304,11 @@ def index():
             print(all_gifs)
             return render_template('all_gifs.html', all_gifs = all_gifs)
         else:
-            # request gifs for that search term
-            # add the search term and gifs to database
-            # Need to figure out what the difference between this baseURL and the other URL are
             params = {api_key:api_key}
             baseURL = "https://api.giphy.com/v1/gifs/search"
             feed_name=form.search.data
             params['q']=feed_name
             response = requests.get(baseURL , params)
-            #print("RESPONSE TEXT", response.text)
             gifInResponse = json.loads(response.text)['buzzes']
             gifFieldsRequired = []
             for a in gifInResponse:
@@ -315,12 +321,14 @@ def index():
             print(searchterm)
             return "Added to DB"
     return render_template('index.html', form=form, num_gifs=num_gifs)
+'''
 
 @app.route('/gifs_searched/<search_term>')
 def search_results(search_term):
     term = SearchTerm.query.filter_by(term=search_term).first()
     relevant_gifs = term.gifs.all()
     return render_template('searched_gifs.html',gifs=relevant_gifs,term=term)
+
 
 @app.route('/search_terms')
 def search_terms():
