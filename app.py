@@ -12,10 +12,6 @@
 import os
 import requests
 import json
-# How to import an ignored giphy_api_key
-#Make a .gitignore foler
-#what to do once you have 
-# from .gitignore/giphy_api_key import api_key
 from giphy_api_key import api_key
 from flask import Flask, render_template, session, redirect, request, url_for, flash
 from flask_script import Manager, Shell
@@ -61,16 +57,10 @@ login_manager.init_app(app) # set up login manager
 # NOTE: Remember that setting up association tables in this course always has the same structure! Just make sure you refer to the correct tables and columns!
 
 # TODO 364: Set up association Table between search terms and GIFs (you can call it anything you want, we suggest 'tags' or 'search_gifs').
-
-
+search_gifs = db.Table('search_gifs', db.Column('search_id', db.Integer, db.ForeignKey('SearchTerm.id')),db.Column('gif_id', db.Integer,db.ForeignKey('Gif.id')))
 
 # TODO 364: Set up association Table between GIFs and collections prepared by user (you can call it anything you want. We suggest: user_collection)
-
-
-tags = db.Table('tags',db.Column('search_id',db.Integer, db.ForeignKey('search.id')),db.Column('gif_id',db.Integer, db.ForeignKey('gifs.id')))
-
-# Set up association Table between Gifs and collections prepared by user
-user_collection = db.Table('user_collection',db.Column('user_id', db.Integer, db.ForeignKey('gifs.id')),db.Column('collection_id',db.Integer, db.ForeignKey('personalCollections.id')))
+user_collection = db.Table('user_collection',db.Column('gif_id', db.Integer, db.ForeignKey('Gif.id')),db.Column('collection_id',db.Integer, db.ForeignKey('PersonalCollection.id')))
 
 
 ## User-related Models
@@ -81,8 +71,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
-    collection = db.relationship('PersonalCollection', backref='User')
     password_hash = db.Column(db.String(128))
+    user_collections = db.relationship('PersonalCollection', backref='User')
 
     @property
     def password(self):
@@ -98,21 +88,6 @@ class User(UserMixin, db.Model):
     @property
     def is_authenticated(self):
         return True
-
-    @property
-    def is_active(self):
-        return True
-
-    @property
-    def password(self):
-        raise AttributeError('password is not a readable attribute')
-
-    @password.setter
-    def password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def verify_password(self, password):
-        return check_password_hash(self.password_hash, password)
 
 ## DB load function
 ## Necessary for behind the scenes login manager that comes with flask_login capabilities! Won't run without this.
@@ -348,7 +323,6 @@ def index():
             return "Added to DB"
     return render_template('index.html', form=form, num_gifs=num_gifs)
 
-# Provided
 @app.route('/gifs_searched/<search_term>')
 def search_results(search_term):
     term = SearchTerm.query.filter_by(term=search_term).first()
@@ -357,12 +331,9 @@ def search_results(search_term):
 
 @app.route('/search_terms')
 def search_terms():
-    pass # Replace with code
-    # TODO 364: Edit this view function so it renders search_terms.html.
-    # That template should show a list of all the search terms that have been searched so far. Each one should link to the gifs that resulted from that search.
-    # HINT: All you have to do is make the right query in this view function and send the right data to the template! You can complete this in two lines. Check out the template for more hints!
+    terms = SearchTerm.query.all()
+    return render_template('search_terms.html', all_terms=terms)
 
-# Provided
 @app.route('/all_gifs')
 def all_gifs():
     gifs = Gif.query.all()
@@ -375,15 +346,21 @@ def create_collection():
     gifs = Gif.query.all()
     choices = [(g.id, g.title) for g in gifs]
     form.gif_picks.choices = choices
-    # TODO 364: If the form validates on submit, get the list of the gif ids that were selected from the form. Use the get_gif_by_id function to create a list of Gif objects.  Then, use the information available to you at this point in the function (e.g. the list of gif objects, the current_user) to invoke the get_or_create_collection function, and redirect to the page that shows a list of all your collections.
-    # If the form is not validated, this view function should simply render the create_collection.html template and send the form to the template.
 
+    if request.method == 'POST':
+        selected_gif = form.gif_picks.data
+    print("GIFS SELECTED", selected_gifs)
+    gif_objects = [get_gif_by_id(int(id)) for id in selected_gifs]
+    print("GIFS RETURNED", gif_objects)
+    get_or_create_collection(name=form.name.data, current_user=current_user, gif_list=gif_objects)
+    return redirect(url_for('collections'))
+return render_template('create_collection.html', form=form)
 
 @app.route('/collections',methods=["GET","POST"])
 @login_required
 def collections():
-    pass # Replace with code
-    # TODO 364: This view function should render the collections.html template so that only the current user's personal gif collection links will render in that template. Make sure to examine the template so that you send it the correct data!
+    collections = PersonalGifCollection.query.filter_by(users_id=current_user.id).all()
+    return render_template('collections.html', collections=collections)
 
 # Provided
 @app.route('/collection/<id_num>')
